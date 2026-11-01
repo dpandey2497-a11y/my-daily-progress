@@ -19,6 +19,9 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v3
+
     - name: Unzip Project
       run: |
         mkdir -p extracted
@@ -29,20 +32,18 @@ jobs:
           cp -r ./* extracted/ 2>/dev/null || true
         fi
 
-        # Find folder having gradlew or build.gradle
-        GRADLEW_PATH=$(find extracted -name "gradlew" -type f | head -n 1)
-        if [ -n "$GRADLEW_PATH" ]; then
-          PROJECT_DIR=$(dirname "$GRADLEW_PATH")
-        else
-          PROJECT_DIR=$(find extracted -name "build.gradle*" -exec dirname {} \; | head -n 1)
+        # Find project directory containing build.gradle
+        PROJECT_DIR=$(find extracted -name "build.gradle*" -exec dirname {} \; | head -n 1)
+        if [ -z "$PROJECT_DIR" ]; then
+          echo "build.gradle not found, using extracted root"
+          PROJECT_DIR="extracted"
         fi
         echo "PROJECT_DIR=$PROJECT_DIR" >> $GITHUB_ENV
 
     - name: Build Debug APK
       run: |
         cd "$PROJECT_DIR"
-        chmod +x ./gradlew
-        ./gradlew assembleDebug --no-daemon
+        gradle assembleDebug --no-daemon --stacktrace
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
