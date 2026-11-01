@@ -13,50 +13,24 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Set up Java 17
+    - name: Set up Java 11
       uses: actions/setup-java@v4
       with:
-        java-version: '17'
+        java-version: '11'
         distribution: 'temurin'
 
-    - name: Unzip Project and Locate Gradle
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+
+    - name: Unzip Project
       run: |
         mkdir -p extracted
-        # Repository ke andar moujood zip file ko dhoondh kar extract karna
         ZIP_FILE=$(find . -maxdepth 2 -name "*.zip" | head -n 1)
         if [ -n "$ZIP_FILE" ]; then
-          echo "Found ZIP: $ZIP_FILE"
           unzip -q "$ZIP_FILE" -d extracted/
         else
-          echo "No ZIP found directly, using repo root"
           cp -r ./* extracted/ 2>/dev/null || true
         fi
 
-        # Gradlew ya build.gradle file ka path dhoondhna
         PROJECT_DIR=$(find extracted -name "build.gradle*" -exec dirname {} \; | head -n 1)
-        if [ -z "$PROJECT_DIR" ]; then
-          echo "Error: build.gradle not found in ZIP"
-          exit 1
-        fi
-        echo "PROJECT_DIR=$PROJECT_DIR" >> $GITHUB_ENV
-
-    - name: Setup Gradle Wrapper if missing
-      run: |
-        cd "$PROJECT_DIR"
-        if [ ! -f "./gradlew" ]; then
-          echo "gradlew not found, installing gradle..."
-          sudo apt-get update && sudo apt-get install -y gradle
-          gradle wrapper
-        fi
-        chmod +x ./gradlew
-
-    - name: Build Debug APK
-      run: |
-        cd "$PROJECT_DIR"
-        ./gradlew assembleDebug --stacktrace
-
-    - name: Upload APK
-      uses: actions/upload-artifact@v4
-      with:
-        name: MyDailyProgress-APK
-        path: ${{ env.PROJECT_DIR }}/**/build/outputs/apk/debug/*.apk
+        echo
